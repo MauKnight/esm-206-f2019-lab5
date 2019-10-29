@@ -9,3 +9,282 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
+
+### Lab objectives
+- Learn parse dates with lubridate
+- Get counts with count()
+- Uncount rows
+- One and two sample t test
+- Create a heatmap woth geom_tile()
+
+```{r, include= FALSE}
+# include is about showing the inputs or not
+
+# Read in data and attach packages
+library(tidyverse)
+library(here)
+library(janitor)
+
+lobster_abundance <- read_csv(here::here("data","lobster_abundance.csv"), na="-99999") %>% 
+  janitor::clean_names()
+
+# NA in -99999
+# variable names in capital letter
+# date us column
+# looks ok...BUT no unique observations. find e the mean based in the counts
+
+# every single observation has its own row.
+
+```
+
+Use tidyr ::uncount function to convert our lobsters data to frequency format to caase format
+
+
+
+```{r}
+lobster_tidy <- lobster_abundance %>% 
+  tidyr::uncount(lobster_count)
+
+
+# populate all the missing values
+
+
+```
+
+
+### exploratory data visualization
+
+ig i ignore variables like date, how the analysios change
+
+```{r}
+
+ggplot(lobster_tidy, aes(x=site, y=size_mm)) + #what makes the diffences
+  geom_jitter(aes(color=site), 
+              alpha=0.5, 
+              width = 0.2)
+#Histogram
+
+ggplot(lobster_tidy, aes(x=size_mm))+
+  geom_histogram(aes(fill=site))+
+  facet_wrap(~site, scales = "free") #compara graphs without same units etc mislead the audience
+
+#which is the distribution? they seem normality
+
+
+#
+
+
+ggplot(lobster_tidy, aes(sample=size_mm))+
+  geom_qq()+
+    facet_wrap(~site)  #normal ditribution? semms!. the degault is normal d but we can test others!\
+#even i fht actual sample doesnt look normal, it is comfortable to say our mean is normal. no matter eh population strcuture, if wr take more samples and plots more means, i witll be normality d applies
+#cONCEPTURALITY MAKES SENSE> Yes. for ...lobters
+
+#mean is reasonable to compare? it seems smaller samples also are normal....mean is useful to vompare? NOT JUST S BIG NUMNBER
+
+
+
+```
+
+#### CONVERT DATE TO COLUMN TO CLASS DATE
+
+
+
+WE LL THE LIBREDATE PACKAGET TO CNVERT DATA FORMALTE AND PARSE MONTH AND YEAR
+
+
+
+```{r}
+
+lobster_date <- lobster_tidy %>% 
+  mutate(
+    date_new=lubridate::mdy(date)
+  )
+
+
+# separate month and year?
+
+
+
+```
+
+
+Now lests parase year and month with month () and year()
+
+
+```{r}
+lobster_parse_date <- lobster_date %>% 
+  mutate(
+    obs_month = lubridate:: month(date_new),
+    obs_year=lubridate::year(date_new)
+    )# parse month and label it name
+  
+
+# class(lobster_parse_date$obs_month)
+
+
+
+```
+
+groups of lobters base in hierachacl groupins
+
+
+many way to get ounts. we will see the most common and useful. they count groupt htins, doest th countsm, saves resultas and doest modigy tyour dataset
+
+
+```{r}
+
+# first lets count lobters by year and month
+
+lobster_ym <- lobster_parse_date %>% 
+  dplyr::count(obs_year, obs_month)
+
+
+lobster_y <- lobster_parse_date %>% 
+  dplyr::count(obs_year)
+
+
+
+lobster_site <- lobster_parse_date %>% 
+  dplyr::count(site) #having data in tidy format brings me freely to group
+
+
+```
+
+
+if we we stats over counts. it easier to usa group_by or n()
+
+
+```{r}
+
+lobster_summary <- lobster_parse_date %>% 
+  group_by(site) %>% 
+  summarize(
+    mean_size=mean(site_mm, na.rm=TRUE),
+    sd_size=sd(size, na.rm = TRUE),
+    obster_number=n(),
+    lobster_number=n()
+  )
+
+
+
+```
+
+#### FIND CONFIDENCE INTERVALS
+
+
+USE TTEST FUNCTION TO FINE CONDIDENC EINTERVALES AND PERFORM TE TESTS TO COMPARE MEAN IIN TOW SAMPLES.
+```{r}
+
+
+# if we calculta a 9%% confidence. it took a bunc more of the obervations. 
+
+
+# we will use t student distribution. itd a normal distribution but with uncertainty into accoutn
+
+
+
+ivee_lobster <- lobster_tidy %>% 
+  filter(site=="IVEE") %>% 
+  pull(size_mm)
+
+# pull functions to extrat nd keep
+
+
+t.test(ivee_lobster)
+
+
+# the true mean of lengt of lobters is zeroooo? te score how different is the valye. p value tell us if ho is
+# its mean is zero the probability that i can take a sample is nothing. Ther eisd chance that obters is zero ivee
+
+# the chance so happening is paractical zero. 
+
+# confiden interval means, more obs 95% will hace the true mean between 72 y 74 BUT htey miht be correct.
+
+# here is a interval i would expect the 8% wlkk cobtai the true population mean! BUT IAM NOT SURe
+
+# if 99.0 contains the ture value. we will have a wider view
+
+```
+
+THERE ARE SIGNIFICANT DIFFERENCE BETWEEN LOBSTER SIZE IN SITES. THE MEAN IS RELEVANTE?
+
+
+```{r}
+
+#2 SAMPLE T TEST. TH TI AVE ENOUGHT EVIDENCE THAT SAMPLES CAME FOROM POPULTATIONS WITH DIFFERENT MEANS.
+# IF I DRAW TWO SAMPLES FROM THE SAMEE POPULATION AND ARE PERFECT RAMDON SAMPLES. THE DIFFERENCE WOULD BE ZEOOOOO
+# WE DONE ENOIUGH EXPLORATORY ABNALYSI TO DETERMINA THAT A 2 SAMPLE T TEST FOR MEANS COMPARISON IS APPROPRIATE
+
+# we ask their dirextion
+
+
+napl_sample <- lobster_tidy %>% 
+  filter(site=="NAPL") %>% 
+  pull(size_mm)
+
+mohk_sample <- lobster_tidy %>% 
+    filter(site=="MOHK") %>% 
+  pull(size_mm)
+
+mn_ttest <- t.test(mohk_sample, napl_sample)
+mn_ttest
+
+
+
+
+# it IA THEDIRETION and otrder!!!!
+
+# likely by random chance to pick observations from pop wih same mean. same mean and kind differet OR is really unlikely that they come for pops with same mean.
+
+# its so unlikely to drawn the to sample, more likely that the started from different pop.
+
+
+
+
+
+```
+
+# the irs a significant differenc in lobster lengts betwee nbaples and mohawk reef
+
+
+# this is the least interestin, more interesting, structkry of the data, mean values. 
+
+
+# p value ois interes that there more interesting things ()t(df)=stats, p<0.05
+
+
+```{r}
+
+
+lobster_m <- lobster_tidy %>% 
+  filter(site %in% c("NAPL", "MOHK"))
+
+mn_ttest2 <- t.test(size_mm~ site, data=lobster_m)
+
+mn_ttest2 
+mn_test2$p.value
+mn_test2$statistic
+```
+
+# there is a sig diff t(1850.9)=-19.548. p= 2.2.) we need to call parts
+
+
+#?t.test
+
+
+Here is the t-statistic : `r mn_tttest2$statistic`
+
+
+```{r}
+
+lobster_ys <- lobster_parse_date%>% 
+  count(obs_year, site)
+
+
+ggplot(data=lobster_ys, aes(x=obs_year, y=site))+
+  geom_tile(aes(fill = n))
+
+
+```
+
